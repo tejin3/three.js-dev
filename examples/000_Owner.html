@@ -1,0 +1,622 @@
+
+<!Doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.2.3/milligram.min.css">
+
+<script src="./lib/web3.min.js"></script>
+<body>
+  
+  <div>
+    <button onclick="init()">지갑연결</button>
+    <div id="account"></div>  
+  </div>
+  <div>
+    <button onclick="getContract()">컨트랙트연결</button>
+    <div id="contract"></div>
+  </div>
+
+  <div>
+    <button onclick="cubeId()">큐브판매개수</button>
+    <div id="cubeId"></div>   
+  </div>
+  <div>
+    <button onclick="cubeToOwner()">큐브주인확인</button>
+    <table id="cubeToOwner"></table>   
+  </div>
+	<div>
+    <button onclick="cubeLimit()">큐브리미트확인</button>
+    <table id="cubeLimit"></table>   
+  </div>
+  <div>
+    <button onclick="withId()">스타코인발행개수</button>
+    <div id="withId"></div>
+  
+  </div>
+  <div>
+    <button onclick="withToOwnerAddress()">스타코인의주인인큐브들</button> 
+    <input type="number" id="withToOwnerAddress" placeholder="withId"/>
+    <input type="number" id="withToOwnerAddress1" placeholder="위에 적은 withId에 속한 몇번째 큐브 주인을 확인하시겠습니까?(0 ~)"/>
+    <div id="withToOwnerAddress2"></div>
+  </div>
+
+  <div>
+    <button onclick="setCubeLimit()">다음NFT큐브발행수</button>
+    <input type="number" id="cubeLimitInput" placeholder="cubeLimitInput"/>
+    <table id="cubeLimit"></table>   
+  </div>
+  <div>
+    <button onclick="setCubePrice()">다음NFT큐브가격</button>
+    <input type="number" id="cubePriceInput" placeholder="cubePriceInput"/>
+    <table id="cubePrice"></table>   
+  </div>
+	<div>
+    <button onclick="transfer()">NFT큐브교환</button>
+		<input type="text"id="transferAddress" placeholder="transferAddress">
+    <input type="number" id="transferTokenId" placeholder="transferTokenId"/>
+		<label>Transfer</label>
+    <div id="eventResult"></div>       
+  </div>
+  <div>
+		<button onclick="approve()">NFT큐브교환승인</button>
+		<input type="text"id="approveAddress" placeholder="approveAddress">
+    <input type="number" id="approveTokenId" placeholder="approveTokenId"/>
+		<label>Approval</label>
+    <div id="eventResult1"></div> 
+  </div>
+	<div>
+		<button onclick="takeOwnership()">나에게교환승인된큐브획득</button>		
+    <input type="number" id="takeOwnershipTokenId" placeholder="takeOwnershipTokenId"/>		
+    <div id="takeOwnership"></div> 
+  </div>
+</body>
+
+<script type="text/javascript">
+
+  let provider;
+  let web3;
+  let account;
+  let contract;
+
+ async function init() {
+
+  if (window.ethereum) {
+      web3 = new Web3(window.ethereum);
+      try {
+        // Request account access if needed
+        await window.ethereum.enable();
+        // Acccounts now exposed
+        web3.eth.getAccounts().then(function(accounts){
+          account = accounts[0]
+          document.getElementById("account").innerText = account
+        })
+      } catch (error) {
+      }
+    }
+    // Legacy dapp browsers...
+    else if (window.web3) {
+      // Use Mist/MetaMask's provider.
+      web3 = window.web3;
+      console.log("Injected web3 detected.");
+    }
+  }
+  
+  function getContract() {
+    let abi = [
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "_owner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "_approved",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "Approval",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "_from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "_to",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "Transfer",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "allCubeLimit",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "approve",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_owner",
+				"type": "address"
+			}
+		],
+		"name": "balanceOf",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "_balance",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "int256",
+				"name": "_x",
+				"type": "int256"
+			},
+			{
+				"internalType": "int256",
+				"name": "_y",
+				"type": "int256"
+			},
+			{
+				"internalType": "int256",
+				"name": "_z",
+				"type": "int256"
+			}
+		],
+		"name": "cubeBuy",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "cubeId",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "cubeLimit",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "cubePrice",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "cubeToOwner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "cubeX",
+		"outputs": [
+			{
+				"internalType": "int256",
+				"name": "",
+				"type": "int256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "cubeY",
+		"outputs": [
+			{
+				"internalType": "int256",
+				"name": "",
+				"type": "int256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "cubeZ",
+		"outputs": [
+			{
+				"internalType": "int256",
+				"name": "",
+				"type": "int256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "ownerCubeCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ownerOf",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "_owner",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_cubeLimit",
+				"type": "uint256"
+			}
+		],
+		"name": "setCubeLimit",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_cubePrice",
+				"type": "uint256"
+			}
+		],
+		"name": "setCubePrice",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "takeOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "transfer",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withId",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "withToCubeId",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "withToOwnerAddress",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
+    contract = new web3.eth.Contract(abi, "0xE5B0af00FbC07C0d9CB959A62000dF6C1Ba25289")
+    document.getElementById("contract").innerText = contract._address
+    console.log(contract)
+
+    // listen event
+    contract.events.Transfer({}, function(error, event){ 
+      console.log(event)
+      document.getElementById("eventResult").innerText = event.returnValues._from+", "+event.returnValues._to+","+event.returnValues._tokenId;
+    })
+    document.getElementById("eventResult").innerText = "Transfer Listening...";
+
+		// listen event
+    contract.events.Approval({}, function(error, event){ 
+      console.log(event)
+      document.getElementById("eventResult1").innerText = event.returnValues._owner+", "+event.returnValues._approved+","+event.returnValues._tokenId;
+    })
+    document.getElementById("eventResult1").innerText = "Approval Listening..."
+  }
+  
+  
+  
+  var cubeId;
+	var nowCubeID = 0;
+
+  function cubeId(){
+    contract.methods.cubeId().call()
+    .then(function(result){   
+      document.getElementById("cubeId").innerHTML = result;
+      cubeId = result;
+      });
+  }
+
+
+  function cubeLimit(){
+    contract.methods.cubeLimit().call()
+    .then(function(result){   
+      document.getElementById("cubeLimit").innerHTML = result;
+      
+      });
+  }
+
+
+  let list = "";
+
+
+ async function cubeToOwner(){
+    for(var i = 0; i < cubeId; i++){
+     var resultCTO = await contract.methods.cubeToOwner(i).call();    
+      list += "<tr><td>" + "cubeId : " + i +   
+             "</td><td>" + "cubeToOwner : " + resultCTO + "</td></tr>";   
+    }; document.getElementById("cubeToOwner").innerHTML = list; 
+		nowCubeID = cubeId;   
+  }
+
+	
+
+  let list3;
+  var withId;
+
+  function withId(){
+    
+    contract.methods.withId().call()
+    .then(function(result){   
+      document.getElementById("withId").innerHTML = result;
+      withId = result;
+      });   
+  }  
+ 
+ async function withToOwnerAddress(){       
+     document.getElementById("withToOwnerAddress2").innerHTML = 
+     await contract.methods.withToOwnerAddress(document.getElementById("withToOwnerAddress").value, document.getElementById("withToOwnerAddress1").value).call(); 
+    };  
+ 
+
+  let list1 = "";
+  let cubeLimitArray = [];
+
+  async function setCubeLimit() {
+    let cubeLimit = document.getElementById("cubeLimitInput").value;
+    cubeLimitArray.push(cubeLimit);
+    await contract.methods.setCubeLimit(cubeLimit).send({from: account});
+    contract.methods.withId().call().then(function(result){
+      list1 += "<tr><td>" + "withId : " + (result - 1) +
+             "</td><td>" + "cubeLimit </td><td>" + cubeLimit + "</td></tr>";
+      document.getElementById("cubeLimit").innerHTML = list1;
+
+    });    
+  }
+
+  let list2 = "";
+  async function setCubePrice() {
+    let cubePrice = document.getElementById("cubePriceInput").value;
+    await contract.methods.setCubePrice(cubePrice).send({from: account});
+    contract.methods.withId().call().then(function(result){
+      list2 += "<tr><td>" + "withId : " + (result - 1) +
+             "</td><td>" + "cubePrice </td><td>" + cubePrice + "</td></tr>";
+      document.getElementById("cubePrice").innerHTML = list2;
+
+    });    
+  }
+
+	async function transfer(){
+		let transferAddress = document.getElementById("transferAddress").value;
+		let transferTokenId = document.getElementById("transferTokenId").value;
+		await contract.methods.transfer(transferAddress, transferTokenId).send({from: account})		
+	}
+
+	async function approve(){
+		let approveAddress = document.getElementById("approveAddress").value;
+		let approveTokenId = document.getElementById("approveTokenId").value;
+		await contract.methods.approve(approveAddress, approveTokenId).send({from: account})	
+	}
+
+	async function takeOwnership(){
+		let takeOwnershipTokenId =  document.getElementById("takeOwnershipTokenId").value;
+		await contract.methods.takeOwnership(takeOwnershipTokenId).send({from: account})
+	}
+  
+
+</script>
+</html>

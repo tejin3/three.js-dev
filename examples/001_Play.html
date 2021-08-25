@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - interactive - voxel painter</title>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+		/>
+		<link type="text/css" rel="stylesheet" href="main.css" />
+		<style>
+			body {
+				background-color: #f0f0f0;
+				color: #444;
+			}
+			a {
+				color: #08f;
+			}
+			input {
+				width: 350px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="info">
+			<button id="abc">메타마스크 연결</button>
+			<input type="text" id="meta" disabled />
+			<button id="getContract">컨트랙트 연결</button>
+			<input type="text" id="contract" disabled />
+			<br />
+			가격<input type="number" id="price" disabled /><br />
+			<strong>click</strong>: buy Cube
+			<br />
+			<div id="xyz"></div>
+		</div>
+
+		<script type="module">
+			import * as THREE from "../build/three.module.js";
+			import { OrbitControls } from "./jsm/controls/OrbitControls.js";
+			import {
+				CSS2DRenderer,
+				CSS2DObject,
+			} from "./jsm/renderers/CSS2DRenderer.js";
+			import Stats from "./jsm/libs/stats.module.js";
+			import { GUI } from "./jsm/libs/dat.gui.module.js";
+			import { GLTFLoader } from "./jsm/loaders/GLTFLoader.js";
+			import {} from "./lib/web3.min.js";
+			import { MD2CharacterComplex } from "./jsm/misc/MD2CharacterComplex.js";
+			import { Gyroscope } from "./jsm/misc/Gyroscope.js";
+
+			let camera, scene, renderer, labelRenderer;
+
+			let plane;
+			let pointer,
+				raycaster,
+				isShiftDown = false;
+
+			let rollOverMesh, rollOverMaterial;
+			let cubeGeo, cubeMaterial;
+
+			const objects = [];
+			let model, skeleton, mixer;
+
+			let provider;
+			let web3;
+			let account;
+			let contract;
+
+			let container, stats;
+
+			const characters = [];
+			let nCharacters = 0;
+
+			let cameraControls;
+
+			const controls = {
+				moveForward: false,
+				moveBackward: false,
+				moveLeft: false,
+				moveRight: false,
+				jump: false,
+			};
+
+			let xyz = [];
+
+			const clock = new THREE.Clock();
+
+			let cubeId;
+			let asdf = 0;
+
+			init();
+			animate();
+
+			async function abc() {
+				console.log("안녕");
+				if (window.ethereum) {
+					web3 = new Web3(window.ethereum);
+					try {
+						// Request account access if needed
+						await window.ethereum.enable();
+						// Acccounts now exposed
+						web3.eth.getAccounts().then(function (accounts) {
+							account = accounts[0];
+							document.getElementById("meta").value = account;
+						});
+					} catch (error) {}
+				}
+				// Legacy dapp browsers...
+				else if (window.web3) {
+					// Use Mist/MetaMask's provider.
+					web3 = window.web3;
+					console.log("Injected web3 detected.");
+				}
+			}
+
+			async function getContract() {
+				console.log("연결");
+				let abi = [
+					{
+						anonymous: false,
+						inputs: [
+							{
+								indexed: true,
+								internalType: "address",
+								name: "_owner",
+								type: "address",
+							},
+							{
+								indexed: true,
+								internalType: "address",
+								name: "_approved",
+								type: "address",
+							},
+							{
+								indexed: false,
+								internalType: "uint256",
+								name: "_tokenId",
+								type: "uint256",
+							},
+						],
+						name: "Approval",
+						type: "event",
+					},
+					{
+						anonymous: false,
+						inputs: [
+							{
+								indexed: true,
+								internalType: "address",
+								name: "_from",
+								type: "address",
+							},
+							{
+								indexed: true,
+								internalType: "address",
+								name: "_to",
+								type: "address",
+							},
+							{
+								indexed: false,
+								internalType: "uint256",
+								name: "_tokenId",
+								type: "uint256",
+							},
+						],
+						name: "Transfer",
+						type: "event",
+					},
+					{
+						inputs: [],
+						name: "allCubeLimit",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "address",
+								name: "_to",
+								type: "address",
+							},
+							{
+								internalType: "uint256",
+								name: "_tokenId",
+								type: "uint256",
+							},
+						],
+						name: "approve",
+						outputs: [],
+						stateMutability: "nonpayable",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "address",
+								name: "_owner",
+								type: "address",
+							},
+						],
+						name: "balanceOf",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "_balance",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "int256",
+								name: "_x",
+								type: "int256",
+							},
+							{
+								internalType: "int256",
+								name: "_y",
+								type: "int256",
+							},
+							{
+								internalType: "int256",
+								name: "_z",
+								type: "int256",
+							},
+						],
+						name: "cubeBuy",
+						outputs: [],
+						stateMutability: "payable",
+						type: "function",
+					},
+					{
+						inputs: [],
+						name: "cubeId",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [],
+						name: "cubeLimit",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [],
+						name: "cubePrice",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						name: "cubeToOwner",
+						outputs: [
+							{
+								internalType: "address",
+								name: "",
+								type: "address",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						name: "cubeX",
+						outputs: [
+							{
+								internalType: "int256",
+								name: "",
+								type: "int256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						name: "cubeY",
+						outputs: [
+							{
+								internalType: "int256",
+								name: "",
+								type: "int256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						name: "cubeZ",
+						outputs: [
+							{
+								internalType: "int256",
+								name: "",
+								type: "int256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "address",
+								name: "",
+								type: "address",
+							},
+						],
+						name: "ownerCubeCount",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "_tokenId",
+								type: "uint256",
+							},
+						],
+						name: "ownerOf",
+						outputs: [
+							{
+								internalType: "address",
+								name: "_owner",
+								type: "address",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "_cubeLimit",
+								type: "uint256",
+							},
+						],
+						name: "setCubeLimit",
+						outputs: [],
+						stateMutability: "nonpayable",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "_cubePrice",
+								type: "uint256",
+							},
+						],
+						name: "setCubePrice",
+						outputs: [],
+						stateMutability: "nonpayable",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "_tokenId",
+								type: "uint256",
+							},
+						],
+						name: "takeOwnership",
+						outputs: [],
+						stateMutability: "nonpayable",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "address",
+								name: "_to",
+								type: "address",
+							},
+							{
+								internalType: "uint256",
+								name: "_tokenId",
+								type: "uint256",
+							},
+						],
+						name: "transfer",
+						outputs: [],
+						stateMutability: "nonpayable",
+						type: "function",
+					},
+					{
+						inputs: [],
+						name: "withId",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						name: "withToCubeId",
+						outputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+					{
+						inputs: [
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+							{
+								internalType: "uint256",
+								name: "",
+								type: "uint256",
+							},
+						],
+						name: "withToOwnerAddress",
+						outputs: [
+							{
+								internalType: "address",
+								name: "",
+								type: "address",
+							},
+						],
+						stateMutability: "view",
+						type: "function",
+					},
+				];
+				contract = new web3.eth.Contract(
+					abi,
+					"0xE5B0af00FbC07C0d9CB959A62000dF6C1Ba25289"
+				);
+				document.getElementById("contract").value = contract._address;
+				console.log(contract);
+
+				let price = await contract.methods.cubePrice().call();
+				document.getElementById("price").value = price;
+
+				cubeId = await contract.methods.cubeId().call();
+				for (var i = 0; i <= cubeId; i++) {
+					let x = await contract.methods.cubeX(i).call();
+					let y = await contract.methods.cubeY(i).call();
+					let z = await contract.methods.cubeZ(i).call();
+					if (x != 0) {
+						var voxel999 = new THREE.Mesh(cubeGeo, cubeMaterial);
+						console.log(voxel999);
+						voxel999.position.set(x, y, z);
+						scene.add(voxel999);
+
+						objects.push(voxel999);
+					}
+				}
+			}
+
+			function init() {
+				container = document.createElement("div");
+				document.body.appendChild(container);
+
+				// CAMERA
+
+				camera = new THREE.PerspectiveCamera(
+					45,
+					window.innerWidth / window.innerHeight,
+					1,
+					10000
+				);
+				camera.position.set(500, 800, 1300);
+				camera.lookAt(0, 0, 0);
+
+				// SCENE
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0xf0f0f0);
+				scene.add(camera);
+
+				// roll-over helpers
+
+				const rollOverGeo = new THREE.BoxGeometry(50, 50, 50);
+				rollOverMaterial = new THREE.MeshBasicMaterial({
+					color: 0xff0000,
+					opacity: 0.5,
+					transparent: true,
+				});
+				rollOverMesh = new THREE.Mesh(rollOverGeo, rollOverMaterial);
+				scene.add(rollOverMesh);
+
+				// cubes
+
+				cubeGeo = new THREE.BoxGeometry(50, 50, 50);
+				cubeMaterial = new THREE.MeshLambertMaterial({
+					color: 0xfeb74c,
+					map: new THREE.TextureLoader().load(
+						"textures/square-outline-textured.png"
+					),
+				});
+
+				// grid
+
+				const gridHelper = new THREE.GridHelper(1000, 20);
+				scene.add(gridHelper);
+
+				//
+
+				raycaster = new THREE.Raycaster();
+				pointer = new THREE.Vector2();
+
+				const geometry = new THREE.PlaneGeometry(1000, 1000);
+				geometry.rotateX(-Math.PI / 2);
+
+				plane = new THREE.Mesh(
+					geometry,
+					new THREE.MeshBasicMaterial({ visible: false })
+				);
+				scene.add(plane);
+
+				objects.push(plane);
+
+				// lights
+
+				const ambientLight = new THREE.AmbientLight(0x606060);
+				scene.add(ambientLight);
+
+				const directionalLight = new THREE.DirectionalLight(0xffffff);
+				directionalLight.position.set(1, 0.75, 0.5).normalize();
+				scene.add(directionalLight);
+
+				// RENDERER
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				document.body.appendChild(renderer.domElement);
+
+				// STATS
+
+				stats = new Stats();
+				container.appendChild(stats.dom);
+
+				// EVENTS
+
+				document.addEventListener("pointermove", onPointerMove);
+				document.addEventListener("pointerdown", onPointerDown);
+				document.addEventListener("keydown", onDocumentKeyDown);
+				document.addEventListener("keyup", onDocumentKeyUp);
+
+				labelRenderer = new CSS2DRenderer();
+				labelRenderer.setSize(window.innerWidth, window.innerHeight);
+				labelRenderer.domElement.style.position = "absolute";
+				labelRenderer.domElement.style.top = "0px";
+				document.body.appendChild(labelRenderer.domElement);
+
+				const controls1 = new OrbitControls(camera, labelRenderer.domElement);
+				controls1.minDistance = 500;
+				controls1.maxDistance = 1800;
+
+				//
+
+				// LIGHTS
+
+				scene.add(new THREE.AmbientLight(0x222222));
+
+				const light = new THREE.DirectionalLight(0xffffff, 2.25);
+				light.position.set(200, 450, 500);
+
+				light.castShadow = true;
+
+				light.shadow.mapSize.width = 1024;
+				light.shadow.mapSize.height = 512;
+
+				light.shadow.camera.near = 100;
+				light.shadow.camera.far = 1200;
+
+				light.shadow.camera.left = -1000;
+				light.shadow.camera.right = 1000;
+				light.shadow.camera.top = 350;
+				light.shadow.camera.bottom = -350;
+
+				scene.add(light);
+
+				window.addEventListener("resize", onWindowResize);
+				document.getElementById("abc").addEventListener("click", abc);
+				document
+					.getElementById("getContract")
+					.addEventListener("click", getContract);
+
+				// CHARACTER
+
+				const configOgro = {
+					baseUrl: "models/md2/ogro/",
+
+					body: "ogro.md2",
+					skins: ["grok.jpg"],
+					weapons: [["weapon.md2", "weapon.jpg"]],
+					animations: {
+						move: "run",
+						idle: "stand",
+						jump: "jump",
+						attack: "attack",
+						crouchMove: "cwalk",
+						crouchIdle: "cstand",
+						crouchAttach: "crattack",
+					},
+
+					walkSpeed: 100,
+					crouchSpeed: 50,
+				};
+
+				const nRows = 1;
+				const nSkins = configOgro.skins.length;
+
+				nCharacters = nSkins * nRows;
+
+				for (let i = 0; i < nCharacters; i++) {
+					console.log(nCharacters);
+					const character = new MD2CharacterComplex();
+					character.scale = 1;
+					character.controls = controls;
+					console.log(character);
+
+					characters.push(character);
+				}
+
+				const baseCharacter = new MD2CharacterComplex();
+				baseCharacter.scale = 1;
+
+				baseCharacter.onLoadComplete = function () {
+					let k = 0;
+
+					for (let j = 0; j < nRows; j++) {
+						for (let i = 0; i < nSkins; i++) {
+							const cloneCharacter = characters[k];
+
+							cloneCharacter.shareParts(baseCharacter);
+
+							// cast and receive shadows
+							cloneCharacter.enableShadows(true);
+
+							cloneCharacter.setWeapon(0);
+							cloneCharacter.setSkin(i);
+
+							cloneCharacter.root.position.x = (i - nSkins / 2) * 150;
+							cloneCharacter.root.position.z = j * 250;
+
+							scene.add(cloneCharacter.root);
+
+							k++;
+						}
+					}
+
+					const gyro = new Gyroscope();
+					gyro.add(camera);
+					gyro.add(light, light.target);
+
+					characters[Math.floor(nSkins / 2)].root.add(gyro);
+				};
+
+				baseCharacter.loadParts(configOgro);
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+			async function onPointerMove(event) {
+				pointer.set(
+					(event.clientX / window.innerWidth) * 2 - 1,
+					-(event.clientY / window.innerHeight) * 2 + 1
+				);
+
+				raycaster.setFromCamera(pointer, camera);
+
+				const intersects = raycaster.intersectObjects(objects);
+
+				if (intersects.length > 0) {
+					const intersect = intersects[0];
+					if (intersect.object.id >= 29) {
+						// console.log(intersect.object.id);
+						let result = await contract.methods
+							.cubeToOwner(intersect.object.id - 29)
+							.call();
+						intersect.object.name = result;
+
+						if (asdf == 0) {
+							alert(intersect.object.id - 29 + " 번째 큐브 주인 : " + result);
+							asdf = 1;
+						}
+					}
+
+					if (intersect.object.id == 9) {
+						asdf = 0;
+					}
+
+					rollOverMesh.position
+						.copy(intersect.point)
+						.add(intersect.face.normal);
+
+					rollOverMesh.position
+						.divideScalar(50)
+						.floor()
+						.multiplyScalar(50)
+						.addScalar(25);
+				}
+
+				render();
+			}
+
+			async function onPointerDown(event) {
+				pointer.set(
+					(event.clientX / window.innerWidth) * 2 - 1,
+					-(event.clientY / window.innerHeight) * 2 + 1
+				);
+
+				raycaster.setFromCamera(pointer, camera);
+
+				const intersects = raycaster.intersectObjects(objects);
+
+				if (intersects.length > 0) {
+					const intersect = intersects[0];
+
+					// delete cube
+
+					if (isShiftDown) {
+						if (intersect.object !== plane) {
+							scene.remove(intersect.object);
+
+							objects.splice(objects.indexOf(intersect.object), 1);
+						}
+
+						// create cube
+					} else {
+						const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
+
+						voxel.position.copy(intersect.point).add(intersect.face.normal);
+
+						voxel.position
+							.divideScalar(50)
+							.floor()
+							.multiplyScalar(50)
+							.addScalar(25);
+
+						voxel.position.toArray(xyz);
+						var xyzX = xyz[0];
+						console.log(xyzX);
+						var xyzY = xyz[1];
+						console.log(xyzY);
+						var xyzZ = xyz[2];
+						console.log(xyzZ);
+
+						contract.methods
+							.cubeBuy(xyzX, xyzY, xyzZ)
+							.send({
+								from: account,
+								value: document.getElementById("price").value,
+							})
+							.then(function (result) {
+								console.log(result);
+
+								document.getElementById("xyz").innerText =
+									" x : " + xyz[0] + " y : " + xyz[1] + " z : " + xyz[2];
+
+								scene.add(voxel);
+
+								objects.push(voxel);
+							});
+						// cubeId = await contract.methods.cubeId().call();
+					}
+
+					render();
+				}
+			}
+
+			function onDocumentKeyDown(event) {
+				switch (event.keyCode) {
+					case 16:
+						isShiftDown = true;
+						break;
+					case 87:
+						console.log("위");
+						controls.moveForward = true;
+						break;
+					case 83:
+						console.log("아래");
+						controls.moveBackward = true;
+						break;
+					case 65:
+						console.log("왼쪽");
+						controls.moveLeft = true;
+						break;
+					case 68:
+						console.log("오른쪽");
+						controls.moveRight = true;
+						break;
+					case 32:
+						console.log("점프");
+						controls.jump = true;
+						break;
+				}
+			}
+
+			function onDocumentKeyUp(event) {
+				switch (event.keyCode) {
+					case 16:
+						isShiftDown = false;
+						break;
+					case 87:
+						console.log("위끝");
+						controls.moveForward = false;
+						break;
+					case 83:
+						console.log("아래끝");
+						controls.moveBackward = false;
+						break;
+					case 65:
+						console.log("왼쪽끝");
+						controls.moveLeft = false;
+						break;
+					case 68:
+						console.log("오른쪽끝");
+						controls.moveRight = false;
+						break;
+					case 32:
+						console.log("점프끝");
+						controls.jump = false;
+						break;
+				}
+			}
+
+			function animate() {
+				requestAnimationFrame(animate);
+				render();
+
+				stats.update();
+			}
+
+			function render() {
+				const delta = clock.getDelta();
+
+				for (let i = 0; i < nCharacters; i++) {
+					characters[i].update(delta);
+				}
+
+				renderer.render(scene, camera);
+			}
+		</script>
+	</body>
+</html>
