@@ -1,86 +1,16 @@
-three.js
-========
+우리는 흩어져도 추억은 영원할꺼야.
+(feat. 연예인과 팬이 함께 만드는 추억 NFT)
 
-[![NPM Package][npm]][npm-url]
-[![Build Size][build-size]][build-size-url]
-[![NPM Downloads][npm-downloads]][npmtrends-url]
-[![Language Grade][lgtm]][lgtm-url]
-
-#### JavaScript 3D library ####
-
-The aim of the project is to create an easy to use, lightweight, cross-browser, general purpose 3D library. The current builds only include a WebGL renderer but WebGPU (experimental), SVG and CSS3D renderers are also available in the examples.
-
-[Examples](https://threejs.org/examples/) &mdash;
-[Documentation](https://threejs.org/docs/) &mdash;
-[Wiki](https://github.com/mrdoob/three.js/wiki) &mdash;
-[Migrating](https://github.com/mrdoob/three.js/wiki/Migration-Guide) &mdash;
-[Questions](http://stackoverflow.com/questions/tagged/three.js) &mdash;
-[Forum](https://discourse.threejs.org/) &mdash;
-[Slack](https://join.slack.com/t/threejs/shared_invite/zt-rnuegz5e-FQpc6YboDVW~5idlp7GfDw) &mdash;
-[Discord](https://discordapp.com/invite/HF4UdyF)
-
-### Usage ###
-
-This code creates a scene, a camera, and a geometric cube, and it adds the cube to the scene. It then creates a `WebGL` renderer for the scene and camera, and it adds that viewport to the `document.body` element. Finally, it animates the cube within the scene for the camera.
-
-```javascript
-import * as THREE from './js/three.module.js';
-
-let camera, scene, renderer;
-let geometry, material, mesh;
-
-init();
-
-function init() {
-
-	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.01, 10 );
-	camera.position.z = 1;
-
-	scene = new THREE.Scene();
-
-	geometry = new THREE.BoxGeometry( 0.2, 0.2, 0.2 );
-	material = new THREE.MeshNormalMaterial();
-
-	mesh = new THREE.Mesh( geometry, material );
-	scene.add( mesh );
-
-	renderer = new THREE.WebGLRenderer( { antialias: true } );
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	renderer.setAnimationLoop( animation );
-	document.body.appendChild( renderer.domElement );
-
-}
-
-function animation( time ) {
-
-	mesh.rotation.x = time / 2000;
-	mesh.rotation.y = time / 1000;
-
-	renderer.render( scene, camera );
-
-}
-```
-
-If everything went well, you should see [this](https://jsfiddle.net/vy29n6aj/).
-
-### Cloning this repository ###
-
-Cloning the repo with all its history results in a ~2 GB download. If you don't need the whole history you can use the `depth` parameter to significantly reduce download size.
-
-```sh
-git clone --depth=1 https://github.com/mrdoob/three.js.git
-```
-
-### Change log ###
-
-[Releases](https://github.com/mrdoob/three.js/releases)
+이 자료는 과학기술정보통신부에서 주최하고 한경닷컴에서 운영하는 
+'블록체인을 활용하는 비즈니스 모델개발 프로젝트'과정을 학습하는중 만든 자료입니다.
 
 
-[npm]: https://img.shields.io/npm/v/three
-[npm-url]: https://www.npmjs.com/package/three
-[build-size]: https://badgen.net/bundlephobia/minzip/three
-[build-size-url]: https://bundlephobia.com/result?p=three
-[npm-downloads]: https://img.shields.io/npm/dw/three
-[npmtrends-url]: https://www.npmtrends.com/three
-[lgtm]: https://img.shields.io/lgtm/alerts/github/mrdoob/three.js
-[lgtm-url]: https://lgtm.com/projects/g/mrdoob/three.js/
+개발배경.
+1. NFT 시장은 NFT라고 여겨지는 무언가의 가치보다, 이미 NFT를 소유하거나, 이를 소유하고  싶어하는 이들에 의해 가치가 형성된다.
+2. 그렇다면, 이미 팬덤이라고 불릴 만한 커뮤니티를 지니고 있는 시장에, 맞춘 NFT를 만들어보자.
+3. 그 시장은 연예계.
+4. 팬들이 연예인과 함께 한 추억을 영원히 기록물로 남길 수 있다면, 함께 무언가를 만들 수 있는 기회가 주어진다면,
+그런 기회를 갖을 수 있는 자격을 NFT가 준다면 그 형태는 크게 중요한 것이 아니지 않을까?
+
+(작업중)
+
