@@ -21,4 +21,5 @@ NFT의 형태는 크게 중요한 것이 아니지 않을까?
 스타와 함께 블럭을 쌓으며 우리들의 추억을 영원히 기록하자.
 
 구조도 : https://docs.google.com/presentation/d/1Sc_NVAcCfgMoF0CEzKVUIBxlM9-LXl4X/edit?usp=sharing&ouid=110260826170375748061&rtpof=true&sd=true
+
 시전영상 : https://www.youtube.com/watch?v=My1cPkH2b2k 
