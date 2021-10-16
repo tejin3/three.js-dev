@@ -18,7 +18,8 @@ NFT의 형태는 크게 중요한 것이 아니지 않을까?
 
 스타들의 굿즈시장 + NFT = 추억의 유형화
 
-스타와 함께 블럭을 쌓으며 우리들의 추억을 영원히 기록하자.
+함께한 추억이 가슴에만 담기에는 너무 크지 않나요?
+
 
 구조도 : https://docs.google.com/presentation/d/1Sc_NVAcCfgMoF0CEzKVUIBxlM9-LXl4X/edit?usp=sharing&ouid=110260826170375748061&rtpof=true&sd=true
 
